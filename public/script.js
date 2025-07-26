@@ -3,10 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const agregarFilaBtn = document.getElementById('agregarFila');
     const form = document.getElementById('presupuestoForm');
 
-    // Fecha actual por defecto
+    // ✅ Fecha actual por defecto
     const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('fecha').value = hoy;
 
+    // ✅ Función para agregar filas
     function agregarFila(cantidad = 1, descripcion = 'Producto de ejemplo', precio = 100) {
         const fila = document.createElement('tr');
         fila.innerHTML = `
@@ -25,15 +26,18 @@ document.addEventListener('DOMContentLoaded', () => {
         itemsBody.appendChild(fila);
     }
 
-    // Solo 2 filas iniciales
+    // ✅ Dos filas por defecto
     agregarFila(1, 'Producto ejemplo 1', 500);
     agregarFila(2, 'Producto ejemplo 2', 750);
 
+    // ✅ Botón para agregar filas
     agregarFilaBtn.addEventListener('click', () => agregarFila());
 
+    // ✅ Manejo del envío del formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const cliente = document.getElementById('cliente').value;
+
+        const cliente = document.getElementById('cliente').value.trim();
         const cuitCliente = document.getElementById('cuitCliente').value;
         const fecha = document.getElementById('fecha').value;
         const condiciones = document.getElementById('condiciones').value;
@@ -44,39 +48,44 @@ document.addEventListener('DOMContentLoaded', () => {
             precio: row.querySelector('.precio').value
         }));
 
-        const res = await fetch('/generar', {
+        // ✅ Llamada al backend en Vercel
+        const res = await fetch('/api/generar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ cliente, cuitCliente, fecha, condiciones, items })
         });
 
+        if (!res.ok) {
+            alert('Error al generar el presupuesto. Verifica la conexión con el servidor.');
+            return;
+        }
+
         const data = await res.json();
 
-        // ✅ Nombre dinámico: Empresa_Cliente
-        const nombreEmpresa = 'ReconstructoraUnionSA';
-        const clienteLimpio = cliente.trim().replace(/\s+/g, '_');
-        const nombrePDF = `${nombreEmpresa}_${clienteLimpio}.pdf`;
-        const nombreExcel = `${nombreEmpresa}_${clienteLimpio}.xlsx`;
+        // ✅ Nombre dinámico: Cliente-Fecha
+        const clienteLimpio = cliente.replace(/\s+/g, '_');
+        const nombrePDF = `${clienteLimpio}-${fecha}.pdf`;
+        const nombreExcel = `${clienteLimpio}-${fecha}.xlsx`;
 
-        // Crear enlaces de descarga
+        // ✅ Crear blobs
         const excelBlob = b64toBlob(data.excel, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         const pdfBlob = b64toBlob(data.pdf, 'application/pdf');
 
+        // ✅ Mostrar botones de descarga
         document.getElementById('resultados').innerHTML = `
-            <a href="${URL.createObjectURL(excelBlob)}" class="btn btn-outline-primary descargar" download="${nombreExcel}">Descargar Excel</a>
-            <a href="${URL.createObjectURL(pdfBlob)}" class="btn btn-outline-danger descargar" download="${nombrePDF}">Descargar PDF</a>
+            <a href="${URL.createObjectURL(excelBlob)}" class="btn btn-outline-primary" download="${nombreExcel}">Descargar Excel</a>
+            <a href="${URL.createObjectURL(pdfBlob)}" class="btn btn-outline-danger" download="${nombrePDF}" id="descargarPDF">Descargar PDF</a>
         `;
 
-        // ✅ Recargar la página después de descargar
-        document.querySelectorAll('.descargar').forEach(btn => {
-            btn.addEventListener('click', () => {
-                setTimeout(() => {
-                    location.reload();
-                }, 1500); // espera 1.5 segundos
-            });
+        // ✅ Recargar la página al descargar el PDF
+        document.getElementById('descargarPDF').addEventListener('click', () => {
+            setTimeout(() => {
+                window.location.reload(); // Simula F5
+            }, 500); // Espera 0.5 segundos para iniciar la descarga
         });
     });
 
+    // ✅ Conversión Base64 a Blob
     function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
         const byteCharacters = atob(b64Data);
         const byteArrays = [];
