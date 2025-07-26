@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('fecha').value = hoy;
 
-    // ✅ Función para agregar filas
+    // ✅ Agregar una fila de producto
     function agregarFila(cantidad = 1, descripcion = 'Producto de ejemplo', precio = 100) {
         const fila = document.createElement('tr');
         fila.innerHTML = `
@@ -33,12 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // ✅ Botón para agregar filas
     agregarFilaBtn.addEventListener('click', () => agregarFila());
 
-    // ✅ Manejo del envío del formulario
+    // ✅ Manejo del formulario
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
         const cliente = document.getElementById('cliente').value.trim();
-        const cuitCliente = document.getElementById('cuitCliente').value;
+        const cuitCliente = document.getElementById('cuitCliente').value.trim();
         const fecha = document.getElementById('fecha').value;
         const condiciones = document.getElementById('condiciones').value;
 
@@ -56,18 +56,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (!res.ok) {
-            alert('Error al generar el presupuesto. Verifica la conexión con el servidor.');
+            alert('Error al generar el presupuesto. Verifica la conexión.');
             return;
         }
 
         const data = await res.json();
 
-        // ✅ Nombre dinámico: Cliente-Fecha
+        // ✅ Nombre dinámico del archivo: Cliente-Fecha
         const clienteLimpio = cliente.replace(/\s+/g, '_');
         const nombrePDF = `${clienteLimpio}-${fecha}.pdf`;
         const nombreExcel = `${clienteLimpio}-${fecha}.xlsx`;
 
-        // ✅ Crear blobs
+        // ✅ Crear archivos Blob
         const excelBlob = b64toBlob(data.excel, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         const pdfBlob = b64toBlob(data.pdf, 'application/pdf');
 
@@ -77,15 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
             <a href="${URL.createObjectURL(pdfBlob)}" class="btn btn-outline-danger" download="${nombrePDF}" id="descargarPDF">Descargar PDF</a>
         `;
 
-        // ✅ Recargar la página al descargar el PDF
+        // ✅ Recargar la página tras descargar PDF
         document.getElementById('descargarPDF').addEventListener('click', () => {
             setTimeout(() => {
-                window.location.reload(); // Simula F5
-            }, 500); // Espera 0.5 segundos para iniciar la descarga
+                window.location.reload();
+            }, 500); // Espera 0.5 seg para iniciar la descarga
         });
     });
 
-    // ✅ Conversión Base64 a Blob
+    // ✅ Función para convertir Base64 en Blob
     function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
         const byteCharacters = atob(b64Data);
         const byteArrays = [];

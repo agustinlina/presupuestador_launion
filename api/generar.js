@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import XLSX from 'xlsx';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync } from 'fs';
 import path from 'path';
 
 export default async function handler(req, res) {
