@@ -1,6 +1,7 @@
-import { readFileSync, existsSync } from 'fs';
 import PDFDocument from 'pdfkit';
 import XLSX from 'xlsx';
+import { existsSync, readFileSync } from 'fs';
+import path from 'path';
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -9,21 +10,6 @@ export default async function handler(req, res) {
 
     const { cliente, cuitCliente, fecha, condiciones, items } = req.body;
 
-    // Formato numérico argentino
-    const formatoNumero = (num) => {
-        return num.toLocaleString('es-AR', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    };
-
-    // Calcular totales
-    items.forEach(item => {
-        item.precioTotal = parseFloat(item.precio) * parseInt(item.cantidad);
-    });
-    const total = items.reduce((sum, item) => sum + item.precioTotal, 0);
-
-    // ✅ Generar Excel
     const empresa = {
         nombre: "Reconstructora Unión S.A",
         cuit: "30716717565",
@@ -31,6 +17,14 @@ export default async function handler(req, res) {
         email: "olavarria@reconstructoraunion.com"
     };
 
+    const formatoNumero = (num) =>
+        num.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Calcular total
+    items.forEach(item => item.precioTotal = parseFloat(item.precio) * parseInt(item.cantidad));
+    const total = items.reduce((sum, item) => sum + item.precioTotal, 0);
+
+    // ✅ Generar Excel
     const datosExcel = [
         [empresa.nombre, '', '', '', cliente],
         [`Cuit: ${empresa.cuit}`, '', '', '', `CUIT: ${cuitCliente}`],
@@ -42,14 +36,14 @@ export default async function handler(req, res) {
         ['Cantidad', 'Descripción', 'Precio Unitario', 'Precio Total']
     ];
 
-    items.forEach(item => {
+    items.forEach(item =>
         datosExcel.push([
             item.cantidad,
             item.descripcion,
             formatoNumero(item.precio),
             formatoNumero(item.precioTotal)
-        ]);
-    });
+        ])
+    );
 
     datosExcel.push([]);
     datosExcel.push(['', '', 'TOTAL', formatoNumero(total)]);
@@ -73,20 +67,20 @@ export default async function handler(req, res) {
         });
     });
 
+    // Logos
+    const watermarkPath = path.resolve('./public/logo_union.png');
+    const headerPath = path.resolve('./public/logo.png');
+
     // Marca de agua
-    const watermarkLogoPath = 'public/logo_union.png';
-    if (existsSync(watermarkLogoPath)) {
+    if (existsSync(watermarkPath)) {
         const pageWidth = doc.page.width;
         const pageHeight = doc.page.height;
-        doc.opacity(0.1).image(watermarkLogoPath, pageWidth / 4, pageHeight / 4, {
-            width: pageWidth / 2
-        }).opacity(1);
+        doc.opacity(0.1).image(watermarkPath, pageWidth / 4, pageHeight / 4, { width: pageWidth / 2 }).opacity(1);
     }
 
     // Logo encabezado
-    const headerLogoPath = 'public/logo.png';
-    if (existsSync(headerLogoPath)) {
-        doc.image(headerLogoPath, 250, 40, { width: 100 });
+    if (existsSync(headerPath)) {
+        doc.image(headerPath, 250, 40, { width: 100 });
     }
 
     // Datos empresa
@@ -114,6 +108,7 @@ export default async function handler(req, res) {
     const colX = [40, 40 + colWidths[0], 40 + colWidths[0] + colWidths[1], 40 + colWidths[0] + colWidths[1] + colWidths[2]];
     const rowHeight = 25;
 
+    // Encabezado
     doc.fontSize(12).font('Helvetica-Bold');
     doc.rect(40, tableTop, colWidths.reduce((a, b) => a + b), rowHeight).stroke();
     doc.text('Cantidad', colX[0] + 10, tableTop + 7);
@@ -121,6 +116,7 @@ export default async function handler(req, res) {
     doc.text('Precio U.', colX[2] + 10, tableTop + 7);
     doc.text('Precio Total', colX[3] + 10, tableTop + 7);
 
+    // Filas
     doc.fontSize(10).font('Helvetica');
     let y = tableTop + rowHeight;
     items.forEach(item => {
@@ -132,13 +128,11 @@ export default async function handler(req, res) {
         y += rowHeight;
     });
 
+    // Total
     doc.rect(colX[2], y, colWidths[2], rowHeight).fillAndStroke('#FFFF00', '#000');
-    doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
-        .text('TOTAL:', colX[2] + 10, y + 7);
-
+    doc.fillColor('black').fontSize(14).font('Helvetica-Bold').text('TOTAL:', colX[2] + 10, y + 7);
     doc.rect(colX[3], y, colWidths[3], rowHeight).fillAndStroke('#FFFF00', '#000');
-    doc.fillColor('black').fontSize(14).font('Helvetica-Bold')
-        .text(`$${formatoNumero(total)}`, colX[3] + 10, y + 7);
+    doc.fillColor('black').fontSize(14).font('Helvetica-Bold').text(`$${formatoNumero(total)}`, colX[3] + 10, y + 7);
 
     y += rowHeight + 20;
     doc.font('Helvetica-Bold').fontSize(12).text(`Condiciones de pago: `, 40, y, { continued: true });
